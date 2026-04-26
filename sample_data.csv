@@ -1,0 +1,31 @@
+name,location,cuisine,rating,seating_capacity,avg_meal_price,marketing_budget,social_media_followers,chef_experience_years,num_reviews,avg_review_length,ambience_score,service_quality_score,parking_availability,weekend_reservations,weekday_reservations,revenue,month
+The Golden Fork,New York,Italian,4.5,80,45,8500,12000,12,850,180,8.5,9.2,true,320,180,285000,2023-01-01
+Spice Garden,Los Angeles,Indian,4.2,60,35,6000,8500,8,620,155,7.8,8.5,false,280,150,198000,2023-01-01
+Urban Bites,Chicago,American,3.9,120,28,4500,5200,5,410,120,7.2,8.1,true,380,220,165000,2023-01-01
+Harvest Table,Houston,Mediterranean,4.7,45,65,12000,18000,18,1200,220,9.1,9.6,true,180,90,342000,2023-01-01
+Blue Ocean Grill,Phoenix,Japanese,4.1,70,55,7500,9800,10,720,165,8.0,8.8,true,260,140,225000,2023-01-01
+Fire & Smoke,Philadelphia,American,3.8,95,32,3800,4500,4,380,110,6.9,7.8,false,310,200,148000,2023-01-01
+Casa Bella,San Antonio,Mexican,4.4,55,38,5500,7200,9,580,145,8.2,9.0,true,240,130,212000,2023-01-01
+Sakura House,San Diego,Japanese,4.6,50,70,10000,15000,15,980,200,8.8,9.4,true,200,100,318000,2023-01-01
+The Curry Leaf,Dallas,Indian,4.0,65,30,4200,6100,6,450,135,7.5,8.2,false,270,155,172000,2023-01-01
+Noodle Palace,Austin,Chinese,4.3,75,25,5000,8000,7,660,140,7.9,8.7,true,300,170,188000,2023-01-01
+The Golden Fork,New York,Italian,4.5,80,45,9000,12500,12,880,185,8.5,9.2,true,340,195,295000,2023-02-01
+Spice Garden,Los Angeles,Indian,4.2,60,35,6200,8700,8,640,158,7.8,8.5,false,290,158,205000,2023-02-01
+Harvest Table,Houston,Mediterranean,4.7,45,65,12500,18500,18,1250,225,9.1,9.6,true,195,95,358000,2023-02-01
+Blue Ocean Grill,Phoenix,Japanese,4.1,70,55,7800,10000,10,740,168,8.0,8.8,true,270,148,235000,2023-02-01
+Casa Bella,San Antonio,Mexican,4.4,55,38,5800,7500,9,600,148,8.2,9.0,true,250,138,225000,2023-02-01
+Sakura House,San Diego,Japanese,4.6,50,70,10500,15500,15,1020,205,8.8,9.4,true,210,108,332000,2023-02-01
+Bistro Moderne,New York,French,4.8,40,85,15000,20000,20,1400,260,9.5,9.8,false,160,80,425000,2023-03-01
+The Steakhouse,Chicago,American,4.3,100,75,11000,16000,14,900,190,8.6,9.1,true,360,200,380000,2023-03-01
+Green Plate,Los Angeles,Mediterranean,4.0,55,40,5500,8000,6,520,130,7.6,8.3,false,225,125,195000,2023-03-01
+Dragon Palace,San Francisco,Chinese,4.4,80,45,8000,11000,11,780,170,8.3,8.9,true,310,175,268000,2023-03-01
+Mama Mia,New York,Italian,4.6,65,55,10000,14000,16,1050,210,8.9,9.3,true,280,155,345000,2023-03-01
+The Rustic Kitchen,Austin,American,4.1,90,35,5000,7000,7,580,145,7.7,8.4,true,350,210,225000,2023-04-01
+Coastal Eats,San Diego,Mediterranean,4.5,60,50,9000,13000,13,860,180,8.7,9.2,true,240,130,312000,2023-04-01
+Mountain View Cafe,Denver,American,3.9,70,30,4000,5500,5,420,125,7.3,8.0,true,280,165,182000,2023-04-01
+City Flavors,Houston,Mexican,4.2,75,32,5500,7800,8,640,150,7.8,8.6,false,300,175,215000,2023-04-01
+Bistro Moderne,New York,French,4.8,40,85,16000,21000,20,1450,265,9.5,9.8,false,170,85,445000,2023-05-01
+The Steakhouse,Chicago,American,4.3,100,75,11500,16500,14,940,195,8.6,9.1,true,380,215,398000,2023-05-01
+Sakura House,San Diego,Japanese,4.6,50,70,11000,16000,15,1080,212,8.8,9.4,true,225,115,355000,2023-05-01
+Harvest Table,Houston,Mediterranean,4.7,45,65,13000,19000,18,1300,230,9.1,9.6,true,210,102,378000,2023-06-01
+The Golden Fork,New York,Italian,4.5,80,45,9500,13000,12,920,192,8.5,9.2,true,360,205,312000,2023-06-01
