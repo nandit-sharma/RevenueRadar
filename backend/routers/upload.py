@@ -50,13 +50,40 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 @router.post("/upload-csv")
 async def upload_csv(file: UploadFile = File(...)):
-    if not file.filename.endswith('.csv'):
+    if not file.filename.lower().endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
     try:
         content = await file.read()
-        df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        
+        # Try different encodings
+        df = None
+        for encoding in ['utf-8', 'latin-1', 'cp1252', 'utf-16']:
+            try:
+                df = pd.read_csv(io.BytesIO(content), encoding=encoding)
+                print(f"Successfully parsed CSV with {encoding} encoding")
+                break
+            except Exception:
+                continue
+        
+        if df is None:
+            raise Exception("Could not parse CSV with common encodings (UTF-8, Latin-1, etc.)")
+
+        if df.empty:
+            raise HTTPException(status_code=400, detail="The uploaded CSV file is empty")
+
+        # Basic validation: check if there's at least one numeric column for revenue
         df = clean_dataframe(df)
+        
+        if 'revenue' not in df.columns:
+            # Check if we can find any numeric column that might be revenue
+            numeric_cols = df.select_dtypes(include='number').columns
+            if len(numeric_cols) > 0:
+                # Use the first numeric column as revenue if 'revenue' is not found
+                df['revenue'] = df[numeric_cols[0]]
+            else:
+                raise HTTPException(status_code=400, detail="CSV must contain a 'revenue' column or at least one numeric column")
+
         set_dataframe(df)
 
         return {
@@ -66,5 +93,10 @@ async def upload_csv(file: UploadFile = File(...)):
             "rows": len(df),
             "preview": df.head(5).to_dict(orient='records')
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
+        import traceback
+        print(f"Upload error: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")

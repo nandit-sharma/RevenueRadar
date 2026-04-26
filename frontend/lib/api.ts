@@ -73,11 +73,23 @@ export async function getAlerts() {
 export async function uploadCSV(file: File) {
   const formData = new FormData()
   formData.append('file', file)
+  
   const res = await fetch(`${API_URL}/upload-csv`, {
     method: 'POST',
     body: formData,
   })
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+  
+  if (!res.ok) {
+    let errorDetail = `Status ${res.status}`
+    try {
+      const errorJson = await res.json()
+      errorDetail = errorJson.detail || errorDetail
+    } catch (e) {
+      // Not JSON
+    }
+    throw new Error(errorDetail)
+  }
+  
   return res.json()
 }
 

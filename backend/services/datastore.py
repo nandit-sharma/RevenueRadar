@@ -89,13 +89,24 @@ def generate_mock_data() -> pd.DataFrame:
 
 def get_dataframe() -> pd.DataFrame:
     global _dataframe
-    if _dataframe is None:
+    if _dataframe is not None:
+        return _dataframe
+    
+    if USE_MOCK_DATA:
+        print("Initializing with mock data...")
         _dataframe = generate_mock_data()
+    else:
+        # If BigQuery is implemented, it would fetch here. 
+        # For now, we'll still fallback to empty or mock if nothing is there.
+        print("No data available in memory. Please upload a CSV.")
+        _dataframe = generate_mock_data() # Default fallback
+    
     return _dataframe
 
 
 def set_dataframe(df: pd.DataFrame):
     global _dataframe
+    print(f"Updating datastore with new dataframe: {len(df)} rows")
     _dataframe = df
 
 

@@ -24,7 +24,7 @@ export default function UploadSection() {
       const res = await uploadCSV(file)
       setResult({ success: true, message: res.message, rows: res.rows, columns: res.columns })
     } catch (e: any) {
-      setResult({ success: false, message: 'Failed to upload file. Please check format and try again.' })
+      setResult({ success: false, message: e.message || 'Failed to upload file. Please check format and try again.' })
     }
     setLoading(false)
   }
