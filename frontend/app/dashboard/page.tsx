@@ -5,6 +5,7 @@ import { DollarSign, Star, Users, MapPin, TrendingUp, BarChart2 } from 'lucide-r
 import Header from '@/components/layout/Header'
 import KPICard from '@/components/ui/KPICard'
 import UploadSection from '@/components/ui/UploadSection'
+import NoDataState from '@/components/ui/NoDataState'
 import {
   getKPIs, getRevenueTrend, getRevenueByLocation, getRevenueByCuisine, getTopEntities,
   formatCurrency
@@ -38,7 +39,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
+import { useSessionStatus } from '@/lib/useSessionStatus'
+
 export default function DashboardPage() {
+  const session = useSessionStatus()
   const [kpis, setKpis] = useState<any>(null)
   const [trend, setTrend] = useState<any[]>([])
   const [byLocation, setByLocation] = useState<any[]>([])
@@ -72,7 +76,9 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  useEffect(() => { loadData() }, [filters])
+  useEffect(() => { loadData() }, [filters, session.hasData, session.active])
+
+  const hasData = kpis && kpis.total_records > 0
 
   return (
     <div>
@@ -85,11 +91,19 @@ export default function DashboardPage() {
       />
 
       <div style={{ padding: 32 }}>
-        {/* Upload */}
-        <UploadSection />
+        {/* Upload & Session Control */}
+        <UploadSection onSessionChange={loadData} />
+
+        {!loading && !hasData && (
+          <NoDataState
+            title="No Active Dataset Session"
+            description="There is no data loaded. Please drop or select a CSV or XML file above and click 'Start Analysis' to unlock dashboard KPIs, charts, and analysis."
+            showUploadButton={false}
+          />
+        )}
 
         {/* KPI Cards */}
-        {kpis && (
+        {hasData && kpis && (
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -144,7 +158,7 @@ export default function DashboardPage() {
         )}
 
         {/* Revenue Trend */}
-        {trend.length > 0 && (
+        {hasData && trend.length > 0 && (
           <div className="glass-card animate-in animate-in-delay-3" style={{ padding: 24, marginBottom: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
               Revenue Trend
@@ -176,62 +190,64 @@ export default function DashboardPage() {
         )}
 
         {/* Location + Cuisine Charts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
-          {byLocation.length > 0 && (
-            <div className="glass-card animate-in animate-in-delay-4" style={{ padding: 24 }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-                Revenue by Location
-              </h3>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={byLocation} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" horizontal={false} />
-                  <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
-                  <YAxis type="category" dataKey="location" stroke="var(--text-muted)" fontSize={11} width={90} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
-                    {byLocation.map((_: any, i: number) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+        {hasData && (byLocation.length > 0 || byCuisine.length > 0) && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+            {byLocation.length > 0 && (
+              <div className="glass-card animate-in animate-in-delay-4" style={{ padding: 24 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
+                  Revenue by Location
+                </h3>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={byLocation} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" horizontal={false} />
+                    <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
+                    <YAxis type="category" dataKey="location" stroke="var(--text-muted)" fontSize={11} width={90} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
+                      {byLocation.map((_: any, i: number) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
-          {byCuisine.length > 0 && (
-            <div className="glass-card animate-in animate-in-delay-5" style={{ padding: 24 }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-                Revenue by Cuisine
-              </h3>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={byCuisine.slice(0, 8)}
-                    dataKey="revenue"
-                    nameKey="cuisine"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                  >
-                    {byCuisine.slice(0, 8).map((_: any, i: number) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: any) => formatCurrency(v)} />
-                  <Legend formatter={(v: string) => <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{v}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+            {byCuisine.length > 0 && (
+              <div className="glass-card animate-in animate-in-delay-5" style={{ padding: 24 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
+                  Revenue by Cuisine
+                </h3>
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={byCuisine.slice(0, 8)}
+                      dataKey="revenue"
+                      nameKey="cuisine"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                    >
+                      {byCuisine.slice(0, 8).map((_: any, i: number) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: any) => formatCurrency(v)} />
+                    <Legend formatter={(v: string) => <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Top Entities Table */}
-        {topEntities.length > 0 && (
+        {hasData && topEntities.length > 0 && (
           <div className="glass-card animate-in" style={{ padding: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-              Top Restaurants by Revenue
+              Top Performers by Revenue
             </h3>
             <div style={{ overflowX: 'auto' }}>
               <table className="data-table">

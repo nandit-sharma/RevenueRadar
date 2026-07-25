@@ -1,136 +1,218 @@
 import pandas as pd
 import numpy as np
+import os
 import json
 from typing import Optional, Dict, Any, List
-from config import USE_MOCK_DATA, GCP_PROJECT_ID, BIGQUERY_DATASET, BIGQUERY_TABLE
+from datetime import datetime
 
-# Global in-memory datastore
+# Global in-memory datastore with disk persistence
 _dataframe: Optional[pd.DataFrame] = None
+_session_metadata: Optional[Dict[str, Any]] = None
 
-def generate_mock_data() -> pd.DataFrame:
-    """Generate realistic restaurant revenue mock data."""
-    np.random.seed(42)
-    n = 200
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+SESSION_CSV_PATH = os.path.join(UPLOAD_DIR, "active_session.csv")
+SESSION_META_PATH = os.path.join(UPLOAD_DIR, "active_session.json")
 
-    locations = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
-                 "Philadelphia", "San Antonio", "San Diego", "Dallas", "Austin"]
-    cuisines = ["Italian", "Mexican", "Chinese", "Indian", "American",
-                "Japanese", "Thai", "Mediterranean", "French", "Korean"]
-    names = [
-        "The Golden Fork", "Spice Garden", "Urban Bites", "Harvest Table",
-        "Blue Ocean Grill", "Fire & Smoke", "Casa Bella", "Sakura House",
-        "The Curry Leaf", "Noodle Palace", "Bistro Moderne", "The Steakhouse",
-        "Green Plate", "Mama Mia", "Dragon Palace", "Sunset Diner",
-        "The Rustic Kitchen", "Coastal Eats", "Mountain View Cafe", "City Flavors"
-    ]
-
-    months = pd.date_range("2023-01-01", periods=12, freq="MS")
-
-    rows = []
-    for i in range(n):
-        name = np.random.choice(names)
-        location = np.random.choice(locations)
-        cuisine = np.random.choice(cuisines)
-        base_revenue = np.random.uniform(50000, 500000)
-        month = np.random.choice(months)
-
-        # Seasonal multiplier
-        month_num = month.month
-        seasonal = 1.0 + 0.2 * np.sin((month_num - 3) * np.pi / 6)
-
-        marketing = np.random.uniform(1000, 20000)
-        followers = np.random.randint(500, 50000)
-        rating = np.random.uniform(3.0, 5.0)
-        service = np.random.uniform(6.0, 10.0)
-        seating = np.random.randint(20, 200)
-        avg_price = np.random.uniform(10, 80)
-        chef_exp = np.random.randint(1, 25)
-        num_reviews = np.random.randint(50, 2000)
-        avg_review_len = np.random.randint(50, 300)
-        ambience = np.random.uniform(5.0, 10.0)
-        parking = np.random.choice([True, False])
-        weekend_res = np.random.randint(50, 500)
-        weekday_res = np.random.randint(20, 300)
-
-        # Revenue influenced by factors
-        revenue = (base_revenue * seasonal
-                   + marketing * 8
-                   + followers * 2
-                   + rating * 10000
-                   + service * 5000
-                   + np.random.normal(0, 10000))
-        revenue = max(10000, revenue)
-
-        rows.append({
-            "name": name,
-            "location": location,
-            "cuisine": cuisine,
-            "rating": round(rating, 2),
-            "seating_capacity": seating,
-            "avg_meal_price": round(avg_price, 2),
-            "marketing_budget": round(marketing, 2),
-            "social_media_followers": followers,
-            "chef_experience_years": chef_exp,
-            "num_reviews": num_reviews,
-            "avg_review_length": avg_review_len,
-            "ambience_score": round(ambience, 2),
-            "service_quality_score": round(service, 2),
-            "parking_availability": parking,
-            "weekend_reservations": weekend_res,
-            "weekday_reservations": weekday_res,
-            "revenue": round(revenue, 2),
-            "month": month.strftime("%Y-%m-%d"),
-            "year": month.year,
-            "month_num": month.month,
-        })
-
-    return pd.DataFrame(rows)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-def get_dataframe() -> pd.DataFrame:
+def _load_from_disk():
+    """Helper to auto-restore session dataframe and metadata from disk storage if memory was cleared."""
+    global _dataframe, _session_metadata
+    if _dataframe is not None and not _dataframe.empty:
+        return
+
+    if os.path.exists(SESSION_CSV_PATH):
+        try:
+            print(f"[Datastore] Restoring session from disk storage: {SESSION_CSV_PATH}")
+            df = pd.read_csv(SESSION_CSV_PATH)
+            if not df.empty:
+                _dataframe = df
+                if os.path.exists(SESSION_META_PATH):
+                    with open(SESSION_META_PATH, "r", encoding="utf-8") as f:
+                        _session_metadata = json.load(f)
+                else:
+                    _session_metadata = {
+                        "active": True,
+                        "filename": "stored_session.csv",
+                        "rows": len(df),
+                        "columns": list(df.columns),
+                        "started_at": datetime.now().isoformat(),
+                    }
+        except Exception as e:
+            print(f"[Datastore] Failed to restore session from disk: {e}")
+
+
+def get_dataframe() -> Optional[pd.DataFrame]:
+    """Return current session dataframe (restores from disk storage if needed)."""
     global _dataframe
-    if _dataframe is not None:
-        return _dataframe
-    
-    if USE_MOCK_DATA:
-        print("Initializing with mock data...")
-        _dataframe = generate_mock_data()
-    else:
-        # If BigQuery is implemented, it would fetch here. 
-        # For now, we'll still fallback to empty or mock if nothing is there.
-        print("No data available in memory. Please upload a CSV.")
-        _dataframe = generate_mock_data() # Default fallback
-    
+    if _dataframe is None or _dataframe.empty:
+        _load_from_disk()
     return _dataframe
 
 
-def set_dataframe(df: pd.DataFrame):
-    global _dataframe
-    print(f"Updating datastore with new dataframe: {len(df)} rows")
+def set_dataframe(df: pd.DataFrame, filename: str = "uploaded_file"):
+    """Set active session dataframe and persist to disk storage."""
+    global _dataframe, _session_metadata
+    print(f"[Datastore] Starting active session for '{filename}' with {len(df)} rows")
     _dataframe = df
+    _session_metadata = {
+        "active": True,
+        "filename": filename,
+        "rows": len(df),
+        "columns": list(df.columns),
+        "started_at": datetime.now().isoformat(),
+    }
+
+    # Persist to disk storage
+    try:
+        df.to_csv(SESSION_CSV_PATH, index=False)
+        with open(SESSION_META_PATH, "w", encoding="utf-8") as f:
+            json.dump(_session_metadata, f, indent=2)
+        print(f"[Datastore] Successfully persisted session to {SESSION_CSV_PATH}")
+    except Exception as e:
+        print(f"[Datastore] Could not persist session to disk: {e}")
+
+
+def clear_dataframe():
+    """Clear active session dataframe and remove disk storage files."""
+    global _dataframe, _session_metadata
+    print("[Datastore] Session ended — clearing dataframe and disk storage")
+    _dataframe = None
+    _session_metadata = None
+
+    if os.path.exists(SESSION_CSV_PATH):
+        try:
+            os.remove(SESSION_CSV_PATH)
+        except Exception:
+            pass
+    if os.path.exists(SESSION_META_PATH):
+        try:
+            os.remove(SESSION_META_PATH)
+        except Exception:
+            pass
+
+
+def get_session_metadata() -> Dict[str, Any]:
+    """Get active session metadata or inactive status."""
+    global _session_metadata, _dataframe
+    if _dataframe is None or _dataframe.empty:
+        _load_from_disk()
+
+    if _session_metadata and _dataframe is not None and not _dataframe.empty:
+        return _session_metadata
+    return {
+        "active": False,
+        "filename": "",
+        "rows": 0,
+        "columns": [],
+        "started_at": None,
+    }
 
 
 def query_data(filters: Dict[str, Any] = None) -> pd.DataFrame:
+    """Query data from current session dataframe. Returns empty DataFrame if no session active."""
     df = get_dataframe()
+    if df is None or df.empty:
+        return pd.DataFrame()
+
     if not filters:
         return df
 
+    filtered_df = df.copy()
     if filters.get("location"):
-        df = df[df["location"].isin(filters["location"])]
+        if "location" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["location"].isin(filters["location"])]
     if filters.get("cuisine"):
-        df = df[df["cuisine"].isin(filters["cuisine"])]
+        if "cuisine" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["cuisine"].isin(filters["cuisine"])]
     if filters.get("min_rating"):
-        df = df[df["rating"] >= filters["min_rating"]]
+        if "rating" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["rating"] >= filters["min_rating"]]
     if filters.get("max_rating"):
-        df = df[df["rating"] <= filters["max_rating"]]
+        if "rating" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["rating"] <= filters["max_rating"]]
     if filters.get("min_revenue"):
-        df = df[df["revenue"] >= filters["min_revenue"]]
+        if "revenue" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["revenue"] >= filters["min_revenue"]]
     if filters.get("max_revenue"):
-        df = df[df["revenue"] <= filters["max_revenue"]]
+        if "revenue" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["revenue"] <= filters["max_revenue"]]
 
-    return df
+    return filtered_df
 
 
 def get_unique_values(column: str) -> List:
+    """Get unique values for a column in current session dataset."""
     df = get_dataframe()
+    if df is None or df.empty or column not in df.columns:
+        return []
     return sorted(df[column].unique().tolist())
+
+
+from utils import sanitize_for_json
+
+def get_dataset_schema() -> List[Dict[str, Any]]:
+    """Get detailed schema information for current dataset columns."""
+    df = get_dataframe()
+    if df is None or df.empty:
+        return []
+    schema = []
+    for col in df.columns:
+        dtype = str(df[col].dtype)
+        is_num = pd.api.types.is_numeric_dtype(df[col])
+        non_null_count = int(df[col].notna().sum())
+        sample_vals = df[col].dropna().unique()[:3].tolist()
+        col_info = {
+            "column": col,
+            "data_type": dtype,
+            "is_numeric": is_num,
+            "non_null_count": non_null_count,
+            "null_count": len(df) - non_null_count,
+            "sample_values": [str(v) for v in sample_vals],
+        }
+        if is_num:
+            col_info["min"] = float(df[col].min()) if not df[col].empty else 0
+            col_info["max"] = float(df[col].max()) if not df[col].empty else 0
+            col_info["mean"] = float(df[col].mean()) if not df[col].empty else 0
+        schema.append(col_info)
+    return sanitize_for_json(schema)
+
+
+def get_paginated_rows(page: int = 1, limit: int = 50, search: str = "") -> Dict[str, Any]:
+    """Get paginated data rows with optional search filter."""
+    df = get_dataframe()
+    if df is None or df.empty:
+        return {"rows": [], "total": 0, "page": page, "pages": 0, "limit": limit}
+
+    filtered_df = df
+    if search:
+        search_lower = search.lower()
+        mask = pd.Series(False, index=df.index)
+        for col in df.columns:
+            mask = mask | df[col].astype(str).str.lower().str.contains(search_lower, na=False)
+        filtered_df = df[mask]
+
+    total_rows = len(filtered_df)
+    total_pages = max(1, (total_rows + limit - 1) // limit)
+    current_page = min(max(1, page), total_pages)
+
+    start_idx = (current_page - 1) * limit
+    end_idx = start_idx + limit
+    page_df = filtered_df.iloc[start_idx:end_idx].copy()
+
+    # Fill NaNs with None for clean JSON serialization
+    page_df = page_df.where(pd.notnull(page_df), None)
+    rows = page_df.to_dict(orient="records")
+
+    res = {
+        "rows": rows,
+        "total": total_rows,
+        "page": current_page,
+        "pages": total_pages,
+        "limit": limit,
+        "columns": list(df.columns),
+    }
+    return sanitize_for_json(res)
+
+

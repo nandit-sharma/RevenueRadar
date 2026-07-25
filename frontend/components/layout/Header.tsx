@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Filter, RefreshCw, Download, Bell } from 'lucide-react'
-import { getFilterOptions } from '@/lib/api'
+import { useState, useEffect, useRef } from 'react'
+import { Filter, RefreshCw, Download, Bell, Upload, Database, Eye } from 'lucide-react'
+import { getFilterOptions, startSession } from '@/lib/api'
+import { broadcastSessionChange, useSessionStatus } from '@/lib/useSessionStatus'
+import DatasetViewerModal from '@/components/ui/DatasetViewerModal'
 
 interface FilterState {
   location: string
@@ -18,10 +20,14 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle, filters, onFiltersChange, onRefresh }: HeaderProps) {
+  const session = useSessionStatus()
   const [options, setOptions] = useState<{ locations: string[], cuisines: string[] }>({
     locations: [], cuisines: []
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [showViewerModal, setShowViewerModal] = useState(false)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getFilterOptions().then(setOptions).catch(() => {})
@@ -38,6 +44,12 @@ export default function Header({ title, subtitle, filters, onFiltersChange, onRe
       top: 0,
       zIndex: 50,
     }}>
+      <DatasetViewerModal
+        isOpen={showViewerModal}
+        onClose={() => setShowViewerModal(false)}
+        filename={session.filename}
+      />
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{
@@ -54,6 +66,54 @@ export default function Header({ title, subtitle, filters, onFiltersChange, onRe
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{now}</span>
+
+          {/* Inspect File Data Button */}
+          {session.hasData && session.active && (
+            <button
+              onClick={() => setShowViewerModal(true)}
+              className="btn-secondary"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', fontSize: 12,
+                background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)',
+                fontWeight: 600,
+              }}
+              title="Inspect raw uploaded file rows & schema"
+            >
+              <Eye size={14} color="#10b981" />
+              <span>Inspect Active Data ({session.rows.toLocaleString()})</span>
+            </button>
+          )}
+
+
+          {/* Quick Upload Button */}
+          <button
+            onClick={() => uploadInputRef.current?.click()}
+            disabled={uploading}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: 13 }}
+          >
+            {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+            {uploading ? 'Uploading...' : 'Upload Data'}
+          </button>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept=".csv,.xml"
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              setUploading(true)
+              try {
+                await startSession(file)
+                broadcastSessionChange()
+                if (onRefresh) onRefresh()
+              } catch (err: any) {
+                alert(err.message || 'Failed to upload file')
+              }
+              setUploading(false)
+            }}
+          />
 
           {onFiltersChange && (
             <button

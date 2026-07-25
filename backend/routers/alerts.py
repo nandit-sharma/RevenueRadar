@@ -15,11 +15,17 @@ class AlertCreate(BaseModel):
     metric: str
     threshold: float
     condition: str  # "above" or "below"
-    notification_type: str = "dashboard"  # dashboard, email, slack
+    notification_type: str = "dashboard"
 
 @router.get("/alerts")
 def get_alerts():
     df = get_dataframe()
+    if df is None or df.empty:
+        return {
+            "auto_detected": [],
+            "custom": _alerts
+        }
+
     auto_alerts = detect_anomalies(df)
     return {
         "auto_detected": auto_alerts,
@@ -38,6 +44,8 @@ def create_alert(alert: AlertCreate):
 
 def detect_anomalies(df: pd.DataFrame) -> List[dict]:
     alerts = []
+    if df is None or df.empty:
+        return alerts
 
     if 'revenue' in df.columns and 'month' in df.columns:
         monthly = df.groupby('month')['revenue'].sum().sort_index()
@@ -58,22 +66,21 @@ def detect_anomalies(df: pd.DataFrame) -> List[dict]:
                             "type": "revenue_drop",
                             "severity": "high" if z < -2 else "medium",
                             "message": f"Revenue dropped significantly in {month} (${rev:,.0f} vs avg ${mean:,.0f})",
-                            "month": month,
-                            "value": round(rev, 2),
-                            "expected": round(mean, 2)
+                            "month": str(month),
+                            "value": round(float(rev), 2),
+                            "expected": round(float(mean), 2)
                         })
                     elif z > 1.5:
                         alerts.append({
                             "type": "revenue_spike",
                             "severity": "low",
                             "message": f"Revenue spike detected in {month} (${rev:,.0f} vs avg ${mean:,.0f})",
-                            "month": month,
-                            "value": round(rev, 2),
-                            "expected": round(mean, 2)
+                            "month": str(month),
+                            "value": round(float(rev), 2),
+                            "expected": round(float(mean), 2)
                         })
 
-    # Check for underperforming locations
-    if 'location' in df.columns:
+    if 'location' in df.columns and 'revenue' in df.columns:
         loc_revenue = df.groupby('location')['revenue'].sum()
         overall_avg = loc_revenue.mean()
         for loc, rev in loc_revenue.items():
@@ -82,12 +89,11 @@ def detect_anomalies(df: pd.DataFrame) -> List[dict]:
                     "type": "underperforming_location",
                     "severity": "medium",
                     "message": f"{loc} revenue (${rev:,.0f}) is significantly below average (${overall_avg:,.0f})",
-                    "location": loc,
-                    "value": round(rev, 2),
-                    "expected": round(overall_avg, 2)
+                    "location": str(loc),
+                    "value": round(float(rev), 2),
+                    "expected": round(float(overall_avg), 2)
                 })
 
-    # Low reservations warning
     if 'weekend_reservations' in df.columns:
         avg_res = df['weekend_reservations'].mean()
         low_res = df[df['weekend_reservations'] < avg_res * 0.4]
@@ -95,9 +101,9 @@ def detect_anomalies(df: pd.DataFrame) -> List[dict]:
             alerts.append({
                 "type": "low_reservations",
                 "severity": "medium",
-                "message": f"{len(low_res)} restaurants have critically low weekend reservations",
+                "message": f"{len(low_res)} units have critically low weekend reservations",
                 "count": len(low_res),
-                "threshold": round(avg_res * 0.4, 0)
+                "threshold": round(float(avg_res * 0.4), 0)
             })
 
     return alerts[:10]

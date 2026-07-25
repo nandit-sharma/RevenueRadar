@@ -9,8 +9,17 @@ router = APIRouter()
 def get_forecast(periods: int = 6):
     df = query_data()
 
-    if 'month' not in df.columns:
-        return {"forecast": [], "actual": []}
+    if df is None or df.empty or 'month' not in df.columns or 'revenue' not in df.columns:
+        return {
+            "actual": [],
+            "forecast": [],
+            "summary": {
+                "total_forecast_revenue": 0,
+                "avg_monthly_forecast": 0,
+                "projected_growth_pct": 0,
+                "periods": periods
+            }
+        }
 
     monthly = (
         df.groupby('month')['revenue']
@@ -20,33 +29,45 @@ def get_forecast(periods: int = 6):
     )
     monthly.columns = ['month', 'revenue']
 
+    if len(monthly) == 0:
+        return {
+            "actual": [],
+            "forecast": [],
+            "summary": {
+                "total_forecast_revenue": 0,
+                "avg_monthly_forecast": 0,
+                "projected_growth_pct": 0,
+                "periods": periods
+            }
+        }
+
     # Simple linear regression forecast
     n = len(monthly)
     x = np.arange(n)
     y = monthly['revenue'].values
 
-    # Fit polynomial (degree 2 for curve)
     if n >= 3:
         coeffs = np.polyfit(x, y, deg=min(2, n - 1))
         poly = np.poly1d(coeffs)
     else:
-        # fallback linear
         coeffs = np.polyfit(x, y, 1)
         poly = np.poly1d(coeffs)
 
     # Generate forecast dates
-    last_month = pd.to_datetime(monthly['month'].iloc[-1])
-    forecast_months = pd.date_range(last_month, periods=periods + 1, freq='MS')[1:]
+    try:
+        last_month = pd.to_datetime(monthly['month'].iloc[-1])
+        forecast_months = pd.date_range(last_month, periods=periods + 1, freq='MS')[1:]
+    except Exception:
+        forecast_months = [f"Month {i+1}" for i in range(periods)]
 
-    forecast_values = [max(0, poly(n + i)) for i in range(periods)]
+    forecast_values = [max(0, float(poly(n + i))) for i in range(periods)]
 
-    # Add confidence intervals (±10%)
     ci_upper = [v * 1.1 for v in forecast_values]
     ci_lower = [v * 0.9 for v in forecast_values]
 
     forecast_data = [
         {
-            "month": d.strftime("%Y-%m-%d"),
+            "month": d.strftime("%Y-%m-%d") if hasattr(d, 'strftime') else str(d),
             "revenue": round(v, 2),
             "upper": round(u, 2),
             "lower": round(l, 2),
@@ -57,8 +78,8 @@ def get_forecast(periods: int = 6):
 
     actual_data = [
         {
-            "month": row['month'],
-            "revenue": round(row['revenue'], 2),
+            "month": str(row['month']),
+            "revenue": round(float(row['revenue']), 2),
             "type": "actual"
         }
         for _, row in monthly.iterrows()

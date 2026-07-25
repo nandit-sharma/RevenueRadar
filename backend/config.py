@@ -9,6 +9,7 @@ BIGQUERY_DATASET = os.getenv("BIGQUERY_DATASET", "revenue_radar")
 BIGQUERY_TABLE = os.getenv("BIGQUERY_TABLE", "sales_data")
 
 # AI Config
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
