@@ -7,7 +7,7 @@ import NoDataState from '@/components/ui/NoDataState'
 import { getForecast, formatCurrency } from '@/lib/api'
 import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine, Legend
+  Tooltip, ResponsiveContainer, ReferenceLine, Legend, Brush
 } from 'recharts'
 
 export default function ForecastingPage() {
@@ -132,6 +132,13 @@ export default function ForecastingPage() {
                   <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend formatter={(v: string) => <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{v}</span>} />
+                  <Brush
+                    dataKey="month"
+                    height={24}
+                    stroke="rgba(99,102,241,0.4)"
+                    fill="rgba(99,102,241,0.06)"
+                    travellerWidth={6}
+                  />
                   {splitMonth && (
                     <ReferenceLine x={splitMonth} stroke="rgba(99,102,241,0.5)" strokeDasharray="6 3" label={{ value: 'Forecast start', fill: 'var(--text-muted)', fontSize: 11 }} />
                   )}

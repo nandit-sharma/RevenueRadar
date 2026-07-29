@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header'
 import { compareDatasets, formatCurrency } from '@/lib/api'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, Legend
+  ResponsiveContainer, Cell, Legend, Brush
 } from 'recharts'
 import { Upload, GitCompareArrows, TrendingUp, TrendingDown, Minus, Loader2, FileText, Sparkles } from 'lucide-react'
 
@@ -345,6 +345,13 @@ export default function ComparePage() {
                         </span>
                       )}
                     />
+                    <Brush
+                      dataKey="name"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                    />
                     <Bar dataKey="Old" fill="#6366f1" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="New" fill="#10b981" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -394,6 +401,13 @@ export default function ComparePage() {
                           {v === 'Old' ? '📂 Old' : '📂 New'}
                         </span>
                       )}
+                    />
+                    <Brush
+                      dataKey="name"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
                     />
                     <Bar dataKey="Old" fill="#6366f1" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="New" fill="#10b981" radius={[4, 4, 0, 0]} />

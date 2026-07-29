@@ -8,7 +8,7 @@ import ColumnSelector from '@/components/ui/ColumnSelector'
 import { getRevenueTrend, getRevenueByLocation, getRevenueByCuisine, getTopEntities, getDatasetColumns, formatCurrency } from '@/lib/api'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, Legend
+  Tooltip, ResponsiveContainer, Cell, Legend, Brush
 } from 'recharts'
 import { TrendingUp, MapPin, Sparkles, Award, Info } from 'lucide-react'
 
@@ -200,6 +200,14 @@ export default function AnalyticsPage() {
                     <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => v?.slice(0,7)} />
                     <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                     <Tooltip content={<CustomTooltip />} />
+                    <Brush
+                      dataKey="month"
+                      height={24}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                      tickFormatter={v => v?.slice(0,7)}
+                    />
                     <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} dot={{ fill: '#6366f1', r: 5 }} activeDot={{ r: 7 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -224,6 +232,13 @@ export default function AnalyticsPage() {
                     <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                     <YAxis type="category" dataKey="location" stroke="var(--text-muted)" fontSize={12} width={110} />
                     <Tooltip content={<CustomTooltip />} />
+                    <Brush
+                      dataKey="location"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                    />
                     <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
                       {byLocation.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Bar>
@@ -250,6 +265,13 @@ export default function AnalyticsPage() {
                     <XAxis dataKey="cuisine" stroke="var(--text-muted)" fontSize={12} />
                     <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                     <Tooltip content={<CustomTooltip />} />
+                    <Brush
+                      dataKey="cuisine"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                    />
                     <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
                       {byCuisine.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Bar>

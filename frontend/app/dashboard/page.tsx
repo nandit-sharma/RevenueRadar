@@ -13,7 +13,7 @@ import {
 } from '@/lib/api'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Brush
 } from 'recharts'
 
 const COLORS = ['#6366f1', '#818cf8', '#a78bfa', '#7c3aed', '#4f46e5', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
@@ -203,6 +203,14 @@ export default function DashboardPage() {
                   />
                   <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                   <Tooltip content={<CustomTooltip />} />
+                  <Brush
+                    dataKey="month"
+                    height={24}
+                    stroke="rgba(99,102,241,0.4)"
+                    fill="rgba(99,102,241,0.06)"
+                    travellerWidth={6}
+                    tickFormatter={v => v?.slice(0, 7) || v}
+                  />
                   <Line
                     type="monotone"
                     dataKey="revenue"
@@ -239,6 +247,13 @@ export default function DashboardPage() {
                     <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                     <YAxis type="category" dataKey="location" stroke="var(--text-muted)" fontSize={11} width={90} />
                     <Tooltip content={<CustomTooltip />} />
+                    <Brush
+                      dataKey="location"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                    />
                     <Bar dataKey="revenue" radius={[0, 6, 6, 0]}>
                       {byLocation.map((_: any, i: number) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />

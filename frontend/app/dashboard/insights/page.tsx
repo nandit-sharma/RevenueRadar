@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header'
 import { useSessionStatus } from '@/lib/useSessionStatus'
 import NoDataState from '@/components/ui/NoDataState'
 import { getDrivers, getSeasonalPatterns, formatCurrency } from '@/lib/api'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Brush } from 'recharts'
 import { Sparkles, TrendingUp, AlertTriangle, Lightbulb, CheckCircle2, ArrowRight } from 'lucide-react'
 
 const FEATURE_NAME_MAP: Record<string, string> = {
@@ -197,6 +197,13 @@ export default function InsightsPage() {
                     <XAxis type="number" stroke="var(--text-muted)" fontSize={11} domain={[0, 1]} />
                     <YAxis type="category" dataKey="displayName" stroke="var(--text-muted)" fontSize={12} width={170} />
                     <Tooltip content={<CustomTooltip />} />
+                    <Brush
+                      dataKey="displayName"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                    />
                     <Bar dataKey="correlation" radius={[0, 6, 6, 0]}>
                       {drivers.map((entry, index) => (
                         <Cell key={index} fill={entry.direction === 'positive' ? '#10b981' : '#ef4444'} />
@@ -250,6 +257,13 @@ export default function InsightsPage() {
                     <XAxis dataKey="month_name" stroke="var(--text-muted)" fontSize={12} />
                     <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={v => formatCurrency(v)} />
                     <Tooltip formatter={(v: any) => formatCurrency(v)} />
+                    <Brush
+                      dataKey="month_name"
+                      height={22}
+                      stroke="rgba(99,102,241,0.4)"
+                      fill="rgba(99,102,241,0.06)"
+                      travellerWidth={6}
+                    />
                     <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
                   </LineChart>
                 </ResponsiveContainer>
