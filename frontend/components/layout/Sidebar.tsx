@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BarChart3, Lightbulb, TrendingUp,
-  Bell, MessageSquare, Upload, Radar, ChevronRight
+  GitCompareArrows, MessageSquare, Upload, Radar, ChevronRight
 } from 'lucide-react'
 
 const navItems = [
@@ -12,7 +12,7 @@ const navItems = [
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/insights', label: 'Insights', icon: Lightbulb },
   { href: '/dashboard/forecasting', label: 'Forecasting', icon: TrendingUp },
-  { href: '/dashboard/alerts', label: 'Alerts', icon: Bell },
+  { href: '/dashboard/alerts', label: 'Compare', icon: GitCompareArrows },
   { href: '/dashboard/chat', label: 'AI Chat', icon: MessageSquare },
 ]
 

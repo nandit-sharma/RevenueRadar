@@ -6,9 +6,10 @@ import Header from '@/components/layout/Header'
 import KPICard from '@/components/ui/KPICard'
 import UploadSection from '@/components/ui/UploadSection'
 import NoDataState from '@/components/ui/NoDataState'
+import ColumnSelector from '@/components/ui/ColumnSelector'
 import {
   getKPIs, getRevenueTrend, getRevenueByLocation, getRevenueByCuisine, getTopEntities,
-  formatCurrency
+  getDatasetColumns, formatCurrency
 } from '@/lib/api'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -51,6 +52,21 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState({ location: '', cuisine: '' })
   const [loading, setLoading] = useState(true)
 
+  // Column selectors per chart
+  const [numericCols, setNumericCols] = useState<string[]>([])
+  const [trendCol, setTrendCol] = useState('revenue')
+  const [locationCol, setLocationCol] = useState('revenue')
+  const [cuisineCol, setCuisineCol] = useState('revenue')
+  const [topCol, setTopCol] = useState('revenue')
+
+  // Load available columns after session starts
+  const loadColumns = async () => {
+    const cols = await getDatasetColumns()
+    if (cols.numeric.length > 0) {
+      setNumericCols(cols.numeric)
+    }
+  }
+
   const loadData = async () => {
     setLoading(true)
     const f = {
@@ -59,11 +75,11 @@ export default function DashboardPage() {
     }
     try {
       const [kpisData, trendData, locData, cuisineData, topData] = await Promise.all([
-        getKPIs(f),
-        getRevenueTrend(f),
-        getRevenueByLocation(f),
-        getRevenueByCuisine(f),
-        getTopEntities(10, f),
+        getKPIs(f, trendCol),
+        getRevenueTrend(f, trendCol),
+        getRevenueByLocation(f, locationCol),
+        getRevenueByCuisine(f, cuisineCol),
+        getTopEntities(10, f, topCol),
       ])
       setKpis(kpisData)
       setTrend(trendData)
@@ -76,7 +92,11 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  useEffect(() => { loadData() }, [filters, session.hasData, session.active])
+  useEffect(() => {
+    loadColumns()
+  }, [session.hasData, session.active])
+
+  useEffect(() => { loadData() }, [filters, session.hasData, session.active, trendCol, locationCol, cuisineCol, topCol])
 
   const hasData = kpis && kpis.total_records > 0
 
@@ -92,7 +112,7 @@ export default function DashboardPage() {
 
       <div style={{ padding: 32 }}>
         {/* Upload & Session Control */}
-        <UploadSection onSessionChange={loadData} />
+        <UploadSection onSessionChange={() => { loadColumns(); loadData() }} />
 
         {!loading && !hasData && (
           <NoDataState
@@ -160,9 +180,17 @@ export default function DashboardPage() {
         {/* Revenue Trend */}
         {hasData && trend.length > 0 && (
           <div className="glass-card animate-in animate-in-delay-3" style={{ padding: 24, marginBottom: 24 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-              Revenue Trend
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Revenue Trend
+              </h3>
+              <ColumnSelector
+                columns={numericCols}
+                value={trendCol}
+                onChange={setTrendCol}
+                label="Metric column"
+              />
+            </div>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={trend}>
@@ -194,9 +222,17 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
             {byLocation.length > 0 && (
               <div className="glass-card animate-in animate-in-delay-4" style={{ padding: 24 }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-                  Revenue by Location
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Revenue by Location
+                  </h3>
+                  <ColumnSelector
+                    columns={numericCols}
+                    value={locationCol}
+                    onChange={setLocationCol}
+                    label="Metric column"
+                  />
+                </div>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={byLocation} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" horizontal={false} />
@@ -215,9 +251,17 @@ export default function DashboardPage() {
 
             {byCuisine.length > 0 && (
               <div className="glass-card animate-in animate-in-delay-5" style={{ padding: 24 }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-                  Revenue by Cuisine
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Revenue by Cuisine
+                  </h3>
+                  <ColumnSelector
+                    columns={numericCols}
+                    value={cuisineCol}
+                    onChange={setCuisineCol}
+                    label="Metric column"
+                  />
+                </div>
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie
@@ -246,9 +290,17 @@ export default function DashboardPage() {
         {/* Top Entities Table */}
         {hasData && topEntities.length > 0 && (
           <div className="glass-card animate-in" style={{ padding: 24 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>
-              Top Performers by Revenue
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Top Performers by Revenue
+              </h3>
+              <ColumnSelector
+                columns={numericCols}
+                value={topCol}
+                onChange={setTopCol}
+                label="Metric column"
+              />
+            </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="data-table">
                 <thead>
@@ -258,7 +310,7 @@ export default function DashboardPage() {
                     {topEntities[0]?.location !== undefined && <th>Location</th>}
                     {topEntities[0]?.cuisine !== undefined && <th>Cuisine</th>}
                     {topEntities[0]?.rating !== undefined && <th>Rating</th>}
-                    <th>Revenue</th>
+                    <th>{topCol !== 'revenue' ? topCol : 'Revenue'}</th>
                   </tr>
                 </thead>
                 <tbody>

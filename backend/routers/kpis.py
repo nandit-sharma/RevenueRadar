@@ -12,12 +12,19 @@ def parse_list(val: Optional[str]) -> Optional[List[str]]:
         return None
     return [v.strip() for v in val.split(',') if v.strip()]
 
+def _resolve_value_col(df: pd.DataFrame, value_col: Optional[str]) -> str:
+    """Return the column to use as the numeric value/metric. Falls back to 'revenue'."""
+    if value_col and value_col in df.columns and pd.api.types.is_numeric_dtype(df[value_col]):
+        return value_col
+    return 'revenue'
+
 @router.get("/kpis")
 def get_kpis(
     location: Optional[str] = None,
     cuisine: Optional[str] = None,
     min_rating: Optional[float] = None,
     max_rating: Optional[float] = None,
+    value_col: Optional[str] = None,
 ):
     filters = {}
     if location:
@@ -40,31 +47,34 @@ def get_kpis(
             "total_records": 0,
             "avg_revenue": 0,
             "mom_growth": None,
+            "value_col_used": value_col or "revenue",
         }
 
-    total_revenue = df['revenue'].sum() if 'revenue' in df.columns else 0
+    vcol = _resolve_value_col(df, value_col)
+
+    total_revenue = df[vcol].sum() if vcol in df.columns else 0
     avg_rating = df['rating'].mean() if 'rating' in df.columns else 0
     avg_service = df['service_quality_score'].mean() if 'service_quality_score' in df.columns else 0
 
     best_cuisine = "N/A"
-    if 'cuisine' in df.columns and len(df) > 0:
-        cuis_sums = df.groupby('cuisine')['revenue'].sum()
+    if 'cuisine' in df.columns and len(df) > 0 and vcol in df.columns:
+        cuis_sums = df.groupby('cuisine')[vcol].sum()
         if not cuis_sums.empty:
             best_cuisine = str(cuis_sums.idxmax())
 
     best_location = "N/A"
-    if 'location' in df.columns and len(df) > 0:
-        loc_sums = df.groupby('location')['revenue'].sum()
+    if 'location' in df.columns and len(df) > 0 and vcol in df.columns:
+        loc_sums = df.groupby('location')[vcol].sum()
         if not loc_sums.empty:
             best_location = str(loc_sums.idxmax())
 
     total_records = len(df)
-    avg_revenue = df['revenue'].mean() if 'revenue' in df.columns and len(df) > 0 else 0
+    avg_revenue = df[vcol].mean() if vcol in df.columns and len(df) > 0 else 0
 
     # MoM growth if month data available
     mom_growth = None
-    if 'month' in df.columns:
-        monthly = df.groupby('month')['revenue'].sum().sort_index()
+    if 'month' in df.columns and vcol in df.columns:
+        monthly = df.groupby('month')[vcol].sum().sort_index()
         if len(monthly) >= 2:
             prev = float(monthly.iloc[-2])
             curr = float(monthly.iloc[-1])
@@ -81,6 +91,7 @@ def get_kpis(
         "total_records": total_records,
         "avg_revenue": round(float(avg_revenue), 2),
         "mom_growth": mom_growth,
+        "value_col_used": vcol,
     })
 
 
@@ -88,6 +99,7 @@ def get_kpis(
 def revenue_by_location(
     location: Optional[str] = None,
     cuisine: Optional[str] = None,
+    value_col: Optional[str] = None,
 ):
     filters = {}
     if location:
@@ -96,11 +108,15 @@ def revenue_by_location(
         filters["cuisine"] = parse_list(cuisine)
 
     df = query_data(filters)
-    if df is None or df.empty or 'location' not in df.columns or 'revenue' not in df.columns:
+    if df is None or df.empty or 'location' not in df.columns:
+        return []
+
+    vcol = _resolve_value_col(df, value_col)
+    if vcol not in df.columns:
         return []
 
     result = (
-        df.groupby('location')['revenue']
+        df.groupby('location')[vcol]
         .sum()
         .sort_values(ascending=False)
         .reset_index()
@@ -112,6 +128,7 @@ def revenue_by_location(
 def revenue_by_cuisine(
     location: Optional[str] = None,
     cuisine: Optional[str] = None,
+    value_col: Optional[str] = None,
 ):
     filters = {}
     if location:
@@ -120,11 +137,15 @@ def revenue_by_cuisine(
         filters["cuisine"] = parse_list(cuisine)
 
     df = query_data(filters)
-    if df is None or df.empty or 'cuisine' not in df.columns or 'revenue' not in df.columns:
+    if df is None or df.empty or 'cuisine' not in df.columns:
+        return []
+
+    vcol = _resolve_value_col(df, value_col)
+    if vcol not in df.columns:
         return []
 
     result = (
-        df.groupby('cuisine')['revenue']
+        df.groupby('cuisine')[vcol]
         .sum()
         .sort_values(ascending=False)
         .reset_index()
@@ -136,6 +157,7 @@ def revenue_by_cuisine(
 def revenue_trend(
     location: Optional[str] = None,
     cuisine: Optional[str] = None,
+    value_col: Optional[str] = None,
 ):
     filters = {}
     if location:
@@ -144,11 +166,15 @@ def revenue_trend(
         filters["cuisine"] = parse_list(cuisine)
 
     df = query_data(filters)
-    if df is None or df.empty or 'month' not in df.columns or 'revenue' not in df.columns:
+    if df is None or df.empty or 'month' not in df.columns:
+        return []
+
+    vcol = _resolve_value_col(df, value_col)
+    if vcol not in df.columns:
         return []
 
     result = (
-        df.groupby('month')['revenue']
+        df.groupby('month')[vcol]
         .sum()
         .sort_index()
         .reset_index()
@@ -161,6 +187,7 @@ def top_entities(
     limit: int = 10,
     location: Optional[str] = None,
     cuisine: Optional[str] = None,
+    value_col: Optional[str] = None,
 ):
     filters = {}
     if location:
@@ -169,23 +196,29 @@ def top_entities(
         filters["cuisine"] = parse_list(cuisine)
 
     df = query_data(filters)
-    if df is None or df.empty or 'revenue' not in df.columns:
+    if df is None or df.empty:
+        return []
+
+    vcol = _resolve_value_col(df, value_col)
+    if vcol not in df.columns:
         return []
 
     name_col = 'name' if 'name' in df.columns else df.columns[0]
 
-    cols = [name_col, 'revenue']
+    cols = [name_col, vcol]
     for c in ['location', 'cuisine', 'rating', 'service_quality_score', 'marketing_budget']:
-        if c in df.columns:
+        if c in df.columns and c != vcol:
             cols.append(c)
 
+    extra_cols = [c for c in cols[2:] if c in df.columns]
     result = (
         df[cols]
-        .groupby([name_col] + [c for c in cols[2:] if c in df.columns])
-        .agg({'revenue': 'sum'})
+        .groupby([name_col] + extra_cols)
+        .agg({vcol: 'sum'})
         .reset_index()
-        .sort_values('revenue', ascending=False)
+        .sort_values(vcol, ascending=False)
         .head(limit)
+        .rename(columns={vcol: 'revenue'})
     )
     return sanitize_for_json(result.to_dict(orient='records'))
 
@@ -195,4 +228,3 @@ def filter_options():
         "locations": get_unique_values('location'),
         "cuisines": get_unique_values('cuisine'),
     })
-

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import upload, kpis, insights, forecasting, chat, alerts
+from routers import upload, kpis, insights, forecasting, chat, alerts, compare
 
 app = FastAPI(
     title="RevenueRadar API",
@@ -22,6 +22,7 @@ app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(forecasting.router, prefix="/api", tags=["Forecasting"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(alerts.router, prefix="/api", tags=["Alerts"])
+app.include_router(compare.router, prefix="/api", tags=["Compare"])
 
 @app.get("/")
 def root():

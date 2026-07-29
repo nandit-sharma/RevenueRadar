@@ -115,28 +115,44 @@ export async function getDatasetSchema() {
 // ---------------------------------------------------------------------------
 // Data endpoints
 // ---------------------------------------------------------------------------
-export async function getKPIs(filters?: Record<string, string>) {
-  const params = new URLSearchParams(filters || {}).toString()
+export async function getKPIs(filters?: Record<string, string>, valuCol?: string) {
+  const params = new URLSearchParams({
+    ...(filters || {}),
+    ...(valuCol ? { value_col: valuCol } : {}),
+  }).toString()
   return fetchAPI(`/kpis${params ? '?' + params : ''}`)
 }
 
-export async function getRevenueByLocation(filters?: Record<string, string>) {
-  const params = new URLSearchParams(filters || {}).toString()
+export async function getRevenueByLocation(filters?: Record<string, string>, valueCol?: string) {
+  const params = new URLSearchParams({
+    ...(filters || {}),
+    ...(valueCol ? { value_col: valueCol } : {}),
+  }).toString()
   return fetchAPI(`/revenue-by-location${params ? '?' + params : ''}`)
 }
 
-export async function getRevenueByCuisine(filters?: Record<string, string>) {
-  const params = new URLSearchParams(filters || {}).toString()
+export async function getRevenueByCuisine(filters?: Record<string, string>, valueCol?: string) {
+  const params = new URLSearchParams({
+    ...(filters || {}),
+    ...(valueCol ? { value_col: valueCol } : {}),
+  }).toString()
   return fetchAPI(`/revenue-by-cuisine${params ? '?' + params : ''}`)
 }
 
-export async function getRevenueTrend(filters?: Record<string, string>) {
-  const params = new URLSearchParams(filters || {}).toString()
+export async function getRevenueTrend(filters?: Record<string, string>, valueCol?: string) {
+  const params = new URLSearchParams({
+    ...(filters || {}),
+    ...(valueCol ? { value_col: valueCol } : {}),
+  }).toString()
   return fetchAPI(`/revenue-trend${params ? '?' + params : ''}`)
 }
 
-export async function getTopEntities(limit = 10, filters?: Record<string, string>) {
-  const params = new URLSearchParams({ limit: String(limit), ...filters }).toString()
+export async function getTopEntities(limit = 10, filters?: Record<string, string>, valueCol?: string) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    ...(filters || {}),
+    ...(valueCol ? { value_col: valueCol } : {}),
+  }).toString()
   return fetchAPI(`/top-entities?${params}`)
 }
 
@@ -169,6 +185,40 @@ export async function chatQuery(message: string, history: Array<{role: string, c
 
 export async function getAlerts() {
   return fetchAPI('/alerts')
+}
+
+export async function getDatasetColumns(): Promise<{ numeric: string[], categorical: string[], all: string[] }> {
+  try {
+    return await fetchAPI('/dataset/columns')
+  } catch (_) {
+    return { numeric: [], categorical: [], all: [] }
+  }
+}
+
+export async function compareDatasets(
+  fileOld: File,
+  fileNew: File,
+  gap: '1m' | '3m' | '1yr',
+): Promise<any> {
+  const formData = new FormData()
+  formData.append('file_old', fileOld)
+  formData.append('file_new', fileNew)
+  formData.append('gap', gap)
+
+  const res = await fetch(`${API_URL}/compare`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    let detail = `Compare error: ${res.status}`
+    try {
+      const body = await res.json()
+      detail = body.detail || detail
+    } catch (_) {}
+    throw new Error(detail)
+  }
+  return res.json()
 }
 
 // ---------------------------------------------------------------------------

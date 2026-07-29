@@ -352,3 +352,20 @@ async def get_dataset_schema_route():
     from services.datastore import get_dataset_schema
     return {"schema": get_dataset_schema()}
 
+
+@router.get("/dataset/columns")
+async def get_dataset_columns():
+    """Get all column names split into numeric and categorical lists for column selector UI."""
+    from services.datastore import get_dataframe
+    import pandas as pd
+    df = get_dataframe()
+    if df is None or df.empty:
+        return {"numeric": [], "categorical": [], "all": []}
+    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    categorical_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
+    return {
+        "numeric": numeric_cols,
+        "categorical": categorical_cols,
+        "all": list(df.columns),
+    }
+
